@@ -4927,19 +4927,39 @@ class PhotoSwipeBase extends Eventable {
     };
 
     // eslint-disable-next-line max-len
-    const linkEl = /** @type {HTMLAnchorElement} */ (element.tagName === 'A' ? element : element.querySelector('a'));
+    const linkEl = /** @type {HTMLAnchorElement} */ (element.tagName === 'A' ? element : (element.querySelector('a') || element));
 
     if (linkEl) {
+      const thumbnailEl = /** @type {HTMLImageElement | null} */ (element.tagName === 'IMG'
+        ? element
+        : element.querySelector('img'));
+
       // src comes from data-pswp-src attribute,
       // if it's empty link href is used
-      itemData.src = linkEl.dataset.pswpSrc || linkEl.href;
+      itemData.src = linkEl.dataset.pswpSrc || linkEl.href || thumbnailEl?.src;
 
       if (linkEl.dataset.pswpSrcset) {
         itemData.srcset = linkEl.dataset.pswpSrcset;
+      } else {
+        const srcset = thumbnailEl?.srcset;
+        if (srcset) {
+          itemData.srcset = srcset;
+        }
       }
 
-      itemData.width = parseInt(linkEl.dataset.pswpWidth, 10);
-      itemData.height = parseInt(linkEl.dataset.pswpHeight, 10);
+      // Prefer usage of pswpWidth and pswpHeight
+      if (linkEl.dataset.pswpWidth && linkEl.dataset.pswpHeight) {
+        itemData.width = parseInt(linkEl.dataset.pswpWidth, 10);
+        itemData.height = parseInt(linkEl.dataset.pswpHeight, 10);
+      } else {
+        // If not set, use the width and height of the img tag
+        const width = thumbnailEl?.width;
+        const height = thumbnailEl?.height;
+        if (width && height) {
+          itemData.width = width;
+          itemData.height = height;
+        }
+      }
 
       // support legacy w & h properties
       itemData.w = itemData.width;
@@ -4948,8 +4968,6 @@ class PhotoSwipeBase extends Eventable {
       if (linkEl.dataset.pswpType) {
         itemData.type = linkEl.dataset.pswpType;
       }
-
-      const thumbnailEl = element.querySelector('img');
 
       if (thumbnailEl) {
         // msrc is URL to placeholder image that's displayed before large image is loaded
